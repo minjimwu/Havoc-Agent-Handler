@@ -56,6 +56,7 @@ class Golang(AgentType):
         CommandShell(),
         CommandExit(),
         CommandDownload(),
+        CommandUpload(),
         CommandShellScript(),
     ]
 
@@ -152,6 +153,15 @@ class Golang(AgentType):
                 filepath = self.write_tmp_file(filename, agent_json["data"])
                 logging.info("File downloaded")
                 self.console_message(AgentID, "Good", "Download: ", filename+" ==> "+filepath)
+        elif agent_json['task'] == "upload_file":
+            AgentID = response["Agent"]["NameID"]
+            message = agent_json["data"]                
+            if len(message) > 0:
+                logging.info("Upload Output: " + message)
+                if "Error" in message:
+                    self.console_message(AgentID, "Bad", "Error", message)
+                else:                                       
+                    self.console_message(AgentID, "Good", "Uploaded", message)
         return b'ok'
 
 
