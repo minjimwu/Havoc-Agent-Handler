@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"crypto/tls"
 )
 
 func GetRandomItem(list []string) string {
@@ -54,6 +55,9 @@ func PostWithHeaders(body []byte) ([]byte, error) {
 				return nil, err
 			}
 			return conn, nil
+		},
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
 		},
 	}
 
