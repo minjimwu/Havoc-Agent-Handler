@@ -231,6 +231,7 @@ func (agent *LinuxAgent) GetOSVersion() string {
 		version = matches[1]
 	} else {
 		version = runtime.GOOS
+		version += ".1.1.1"
 	}
 	return version
 }
